@@ -1,0 +1,17 @@
+{
+  "name": "inkframe",
+  "version": "0.2.0",
+  "description": "Self-hosted browser widget for placing tattoo designs on body photos, rendering via ComfyUI.",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1080.0"
+  }
+}

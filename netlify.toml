@@ -1,0 +1,63 @@
+[build]
+  # No bundler/build step needed — the frontend is plain static files.
+  publish = "."
+  functions = "netlify/functions"
+
+[build.environment]
+  # server.js is the local-only dev server (not used by Netlify Functions).
+  # Its default fallback values for PORT / RENDER_TIMEOUT_MS happen to match
+  # the literal values of the build's env vars of the same name, which trips
+  # Netlify's secrets scanner as a false positive. Skip scanning that file.
+  SECRETS_SCAN_OMIT_PATHS = "server.js"
+  # AI_MODEL_NAME is configuration, not a secret; its model id may appear in
+  # serverless source or build output as a harmless default/fallback value.
+  SECRETS_SCAN_OMIT_KEYS = "AI_MODEL_NAME,RENDER_TIMEOUT_MS"
+
+# Route every /api/* call to a Netlify Function of the same name.
+# e.g. /api/status -> netlify/functions/status.js
+[[redirects]]
+  from = "/api/status"
+  to = "/.netlify/functions/status"
+  status = 200
+
+[[redirects]]
+  from = "/api/upload/body"
+  to = "/.netlify/functions/upload?kind=body"
+  status = 200
+
+[[redirects]]
+  from = "/api/upload/tattoo"
+  to = "/.netlify/functions/upload?kind=tattoo"
+  status = 200
+
+[[redirects]]
+  from = "/api/upload/steal-source"
+  to = "/.netlify/functions/upload?kind=steal-source"
+  status = 200
+
+[[redirects]]
+  from = "/api/upload/composite"
+  to = "/.netlify/functions/upload?kind=composite"
+  status = 200
+
+[[redirects]]
+  from = "/api/steal-tattoo"
+  to = "/.netlify/functions/steal-tattoo"
+  status = 200
+
+[[redirects]]
+  from = "/api/run-workflow"
+  to = "/.netlify/functions/run-workflow"
+  status = 200
+
+[[redirects]]
+  from = "/api/clear-uploads"
+  to = "/.netlify/functions/clear-uploads"
+  status = 200
+
+# Serve stored uploads/results out of Cloudflare R2 instead of a real
+# /uploads folder on disk (Netlify Functions have no persistent disk).
+[[redirects]]
+  from = "/uploads/:filename"
+  to = "/.netlify/functions/get-upload?filename=:filename"
+  status = 200
