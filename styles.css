@@ -169,11 +169,43 @@ button, input, select { font: inherit; color: inherit; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn-ghost { width: 100%; }
-.btn-ghost .btn-hint {
-  margin-left: auto; color: var(--text-dim); font-size: 11px;
-  max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+/* Filename hint → compact checkmark badge.
+   The raw filename text stays in the DOM (so screen readers + app.js's
+   "uploading…" transient state still work) but sighted users only see a
+   20px green checkmark when a file is loaded. This stops the upload
+   button from growing wider than the panel and pushing the 44px camera
+   button off-screen. */
+.btn-ghost .btn-hint,
+.btn-steal .btn-hint {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0;          /* hide filename visually */
+  line-height: 0;
+  color: transparent;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background 150ms ease, border-color 150ms ease;
 }
-.btn-ghost .btn-hint.has-file { color: var(--ok); }
+.btn-ghost .btn-hint.has-file,
+.btn-steal .btn-hint.has-file {
+  color: var(--ok);
+  background: rgba(62, 207, 142, 0.14);
+  border-color: rgba(62, 207, 142, 0.5);
+}
+.btn-ghost .btn-hint.has-file::before,
+.btn-steal .btn-hint.has-file::before {
+  content: "✓";
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ok);
+}
 .btn-mini { padding: 5px 10px; font-size: 12px; flex: 1; }
 
 /* Fixed height for the upload/steal buttons so they always match the
@@ -509,10 +541,8 @@ input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-dim)
   border-color: var(--warn); background: rgba(245,166,35,0.18);
 }
 .btn-steal .btn-icon { color: var(--warn); }
-.btn-steal .btn-hint {
-  margin-left: auto; color: var(--text-dim); font-size: 11px;
-  max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
+/* (btn-steal .btn-hint styling is now merged into the .btn-ghost .btn-hint
+   rule above — the same checkmark badge applies to both button variants.) */
 .steal-progress {
   margin-top: 8px; display: flex; align-items: center; gap: 10px;
   padding: 8px 10px; background: var(--bg-2);
