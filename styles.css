@@ -213,6 +213,12 @@ button, input, select { font: inherit; color: inherit; }
 }
 .btn-camera:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--bg-3); }
 .btn-camera svg { display: block; }
+.btn-camera .btn-label {
+  /* Camera buttons are icon-only — the descriptive label is duplicated
+     on the neighbouring file upload label, so dropping it here keeps
+     the 44x44 square compact and prevents the text from wrapping. */
+  display: none;
+}
 
 /* Steal row: steal button + camera button side by side */
 .steal-btn-row { display: flex; gap: 8px; align-items: stretch; }
