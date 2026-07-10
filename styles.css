@@ -624,8 +624,9 @@ input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-dim)
     overflow: visible;
   }
 /* ── Workflow Steps Layout Styling ── */
+
 .workflow-step-container {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   background: rgba(14, 15, 18, 0.25);
   padding: 10px;
   border-radius: 8px;
@@ -633,12 +634,12 @@ input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-dim)
 }
 
 .workflow-step-label {
-  font-size: 11px;
-  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text);
   margin-bottom: 8px;
-  letter-spacing: 0.05em;
 }
 
 .design-split-grid {
@@ -696,6 +697,7 @@ input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-dim)
     gap: 12px;
   }
 }
+
   /* Switch canvas-host to relative so the Konva stage (which has explicit px
      dimensions set by JS) drives the container height on mobile. */
   .canvas-host {
