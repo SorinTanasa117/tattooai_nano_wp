@@ -48,8 +48,14 @@ button, input, select { font: inherit; color: inherit; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
 .layout {
-  display: grid; grid-template-columns: 1fr 320px;
-  height: calc(100vh - 52px); gap: 0;
+  display: grid;
+  /* Sidebar = 20% wider baseline (384px @ 1280px viewport) and scales
+     with viewport up to 500px on wide monitors.  clamp() guarantees the
+     layout never collapses below the mobile breakpoint, and never eats
+     too much of the canvas on ultrawide displays. */
+  grid-template-columns: minmax(0, 1fr) clamp(320px, 30vw, 500px);
+  height: calc(100vh - 52px);
+  gap: 0;
 }
 
 .canvas-pane {
@@ -189,10 +195,12 @@ button, input, select { font: inherit; color: inherit; }
 .upload-slot { display: flex; gap: 6px; align-items: stretch; flex: 1; min-width: 0; }
 .upload-slot .btn-ghost { flex: 1; min-width: 0; }
 
-/* Camera icon button — hidden on desktop, shown on mobile */
+/* Camera icon button — shown on every screen size; pairs with the file
+   upload label in the same row.  Fixed 44x44px square so the file label
+   beside it can claim the remaining width via flex: 1. */
 .btn-camera {
-  display: none; /* shown via media query below */
-  flex-shrink: 0;
+  display: inline-flex;
+  flex: 0 0 44px;          /* never grow, never shrink below 44px */
   width: 44px; height: 44px;
   padding: 0;
   align-items: center; justify-content: center;
@@ -211,6 +219,13 @@ button, input, select { font: inherit; color: inherit; }
 
 .upload-row, .quick-row, .result-actions, .rot-row { display: flex; gap: 8px; margin-bottom: 8px; }
 .quick-row, .result-actions, .rot-row { margin-bottom: 0; }
+
+/* Upload row buttons: file label / steal button flex to fill the row,
+   camera button keeps its fixed 44px width (see .btn-camera). */
+.upload-row .btn:not(.btn-camera) {
+  flex: 1;
+  min-width: 0;
+}
 
 .slider-row {
   display: grid; grid-template-columns: 50px 24px 1fr 24px 60px;
@@ -456,7 +471,10 @@ input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-dim)
 /* Steal Tattoo button */
 .steal-area { margin-top: 8px; }
 .btn-steal {
-  width: 100%; flex: 1;
+  /* No fixed width — the row's flex layout (.upload-row .btn:not(.btn-camera))
+     already gives this button flex: 1 to share space with the file label
+     and stay clear of the 44px camera button. */
+  width: auto;
   background: linear-gradient(135deg, rgba(245,166,35,0.12), rgba(245,166,35,0.04));
   border-color: rgba(245,166,35,0.35);
 }
@@ -620,9 +638,8 @@ input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-dim)
     overflow-y: auto;
   }
 
-  /* show camera icon buttons; steal button shrinks to share the row */
-  .btn-camera { display: flex; }
-  .steal-btn-row .btn-steal { width: auto; }
+  /* Upload row layout: file label / steal button take the remaining space;
+     camera buttons are fixed 44px and excluded from flex grow. */
   .upload-row .btn:not(.btn-camera) {
     flex: 1;
     min-width: 0;
