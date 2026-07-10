@@ -729,9 +729,18 @@ input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-dim)
   gap: 6px;
   width: 100%;
 }
-.steal-action-group .btn-steal {
+.steal-action-group .btn-steal:not(.btn-camera) {
   flex: 1;
   min-width: 0;
+}
+/* The camera button also carries .btn-steal for its gold styling, but it
+   must keep the same fixed 44x44 square as every other camera button
+   (see .btn-camera). Restate the fixed sizing here with matching
+   specificity so it isn't overridden by the rule above. */
+.steal-action-group .btn-camera {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
 }
 
 /* Gold Theme Override for AI Steal Features */
