@@ -176,6 +176,27 @@ button, input, select { font: inherit; color: inherit; }
 .btn-ghost .btn-hint.has-file { color: var(--ok); }
 .btn-mini { padding: 5px 10px; font-size: 12px; flex: 1; }
 
+/* Fixed height for the upload/steal buttons so they always match the
+   44px camera buttons beside them, no matter how much the label text
+   wraps at different font/zoom scales. Labels ellipsis instead of
+   wrapping and pushing the button taller. */
+.btn-ghost,
+.btn-steal {
+  height: 44px;
+  overflow: hidden;
+}
+.btn-ghost .btn-label,
+.btn-steal .btn-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.btn-ghost .btn-icon,
+.btn-steal .btn-icon {
+  flex-shrink: 0;
+}
+
 .btn-primary {
   width: 100%; padding: 12px; font-size: 14px; font-weight: 600;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
@@ -704,8 +725,13 @@ input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-dim)
 
 .steal-action-group {
   display: flex;
+  align-items: stretch;
   gap: 6px;
   width: 100%;
+}
+.steal-action-group .btn-steal {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Gold Theme Override for AI Steal Features */
