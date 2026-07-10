@@ -623,6 +623,46 @@ input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-dim)
     min-height: clamp(240px, 45svh, 420px);
     overflow: visible;
   }
+
+  /* Stack the two-column design split into one column on mobile. */
+  .design-split-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Switch canvas-host to relative so the Konva stage (which has explicit px
+     dimensions set by JS) drives the container height on mobile. */
+  .canvas-host {
+    position: relative;
+    inset: unset;
+  }
+
+  .sidebar {
+    border-left: none;
+    border-top: 1px solid var(--line);
+    overflow-y: visible;
+    max-height: none;
+  }
+
+  /* history grid stays scrollable internally */
+  .history-grid-container {
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  /* Upload row layout: file label / steal button take the remaining space;
+     camera buttons are fixed 44px and excluded from flex grow. */
+  .upload-row .btn:not(.btn-camera) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* slightly larger tap targets on small screens */
+  .slider-step { width: 28px; height: 28px; }
+
+  .brand .tag { display: none; }
+}
+
 /* ── Workflow Steps Layout Styling ── */
 
 .workflow-step-container {
@@ -689,46 +729,6 @@ input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-dim)
   border-color: var(--gold-accent) !important;
   background: rgba(245, 166, 35, 0.15) !important;
   box-shadow: 0 0 8px var(--gold-glow);
-}
-
-@media (max-width: 767px) {
-  .design-split-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-}
-
-  /* Switch canvas-host to relative so the Konva stage (which has explicit px
-     dimensions set by JS) drives the container height on mobile. */
-  .canvas-host {
-    position: relative;
-    inset: unset;
-  }
-
-  .sidebar {
-    border-left: none;
-    border-top: 1px solid var(--line);
-    overflow-y: visible;
-    max-height: none;
-  }
-
-  /* history grid stays scrollable internally */
-  .history-grid-container {
-    max-height: 220px;
-    overflow-y: auto;
-  }
-
-  /* Upload row layout: file label / steal button take the remaining space;
-     camera buttons are fixed 44px and excluded from flex grow. */
-  .upload-row .btn:not(.btn-camera) {
-    flex: 1;
-    min-width: 0;
-  }
-
-  /* slightly larger tap targets on small screens */
-  .slider-step { width: 28px; height: 28px; }
-
-  .brand .tag { display: none; }
 }
 
 /* ── History carousel (arrows — hidden on desktop) ───────────────────────── */
