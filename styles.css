@@ -77,6 +77,8 @@ button, input, select { font: inherit; color: inherit; }
   background: var(--bg-2); border-left: 1px solid var(--line);
   padding: 16px; overflow-y: auto;
   display: flex; flex-direction: column; gap: 14px;
+  container-type: inline-size;
+  container-name: inkframe-sidebar;
 }
 
 .panel {
@@ -752,6 +754,27 @@ input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-dim)
   color: var(--text-dim);
   font-weight: 600;
   margin-bottom: 2px;
+}
+
+/* Labels in the two-column split are the tightest fit in the sidebar.
+   Scale them fluidly with the sidebar's own width (not the viewport —
+   this widget can be embedded in a narrow column on a wide page) so
+   they shrink gracefully instead of ellipsizing to one letter. */
+.design-column .btn-label {
+  font-size: clamp(11px, 4.2cqi, 13px);
+}
+
+/* Below this container width even the smallest legible font can't fit
+   "Upload design" / "Steal tattoo" beside a 44px camera button two-up.
+   Stack into a single column so each button gets the full sidebar
+   width instead of continuing to shrink. */
+@container inkframe-sidebar (max-width: 300px) {
+  .design-split-grid {
+    grid-template-columns: 1fr;
+  }
+  .design-column .btn-label {
+    font-size: 13px;
+  }
 }
 
 .steal-action-group {
