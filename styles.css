@@ -735,7 +735,7 @@ input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-dim)
 
 .design-split-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
   align-items: stretch;
 }
@@ -744,6 +744,7 @@ input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-dim)
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .design-column-header {
@@ -758,6 +759,7 @@ input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-dim)
   align-items: stretch;
   gap: 6px;
   width: 100%;
+  min-width: 0;
 }
 .steal-action-group .btn-steal:not(.btn-camera) {
   flex: 1;
