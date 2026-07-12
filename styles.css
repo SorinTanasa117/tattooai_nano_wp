@@ -53,8 +53,8 @@ button, input, select { font: inherit; color: inherit; }
      with viewport up to 500px on wide monitors.  clamp() guarantees the
      layout never collapses below the mobile breakpoint, and never eats
      too much of the canvas on ultrawide displays. */
-  grid-template-columns: minmax(0, 1fr) clamp(320px, 30vw, 500px);
-  height: calc(100vh - 52px);
+  grid-template-columns: minmax(0, 1fr) clamp(320px, 30%, 500px);
+  min-height: 640px; height: min(100vh - 52px, 900px);
   gap: 0;
 }
 

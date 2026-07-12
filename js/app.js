@@ -135,6 +135,49 @@ async function applyOpacityToFile(file, opacity) {
 
 function $(id) { return document.getElementById(id); }
 
+// The WordPress plugin embeds { restUrl, nonce } as a JSON data-config
+// attribute on the widget root (see templates/widget.php) so that caching /
+// JS-optimization plugins can't drop or reorder it like they can an inline
+// <script>. When the widget isn't running inside WordPress at all (e.g. this
+// standalone Netlify deployment used for local dev/testing), there's no
+// #inkframe-widget data-config, so we fall back to the plain "/api/" paths
+// that netlify.toml's redirects understand directly.
+const API_CONFIG = { restUrl: '/api/', nonce: '' };
+// Bundled tattoo-design template images (+ manifest.json) live at a
+// different location depending on deployment: assets/templates/ inside the
+// WP plugin, or /templates/ at the site root for the standalone Netlify
+// deployment. Both come from the same data-config attribute as restUrl.
+let TEMPLATES_BASE = '/templates/';
+(function loadApiConfig() {
+  const root = document.getElementById('inkframe-widget');
+  if (!root || !root.dataset.config) return;
+  try {
+    const parsed = JSON.parse(root.dataset.config);
+    if (parsed.restUrl) API_CONFIG.restUrl = parsed.restUrl;
+    if (parsed.nonce) API_CONFIG.nonce = parsed.nonce;
+    if (parsed.templatesUrl) TEMPLATES_BASE = parsed.templatesUrl;
+  } catch (e) {
+    console.error('InkFrame: failed to parse widget data-config', e);
+  }
+})();
+
+function templateUrl(filename) {
+  return TEMPLATES_BASE.replace(/\/+$/, '') + '/' + String(filename).replace(/^\/+/, '');
+}
+
+function apiUrl(path) {
+  return API_CONFIG.restUrl.replace(/\/+$/, '') + '/' + String(path).replace(/^\/+/, '');
+}
+
+// Merge in the WP REST nonce (X-WP-Nonce) when we have one. WordPress's
+// InkFrame_Proxy::check_request() rejects any /inkframe/v1/* call without a
+// valid nonce, so every authenticated request needs this header attached.
+function withAuthHeaders(headers) {
+  const merged = Object.assign({}, headers || {});
+  if (API_CONFIG.nonce) merged['X-WP-Nonce'] = API_CONFIG.nonce;
+  return merged;
+}
+
 const els = {
   canvas: null,
   bodyInput: $('bodyInput'),
@@ -192,6 +235,11 @@ const els = {
   historyGridContainer: $('historyGridContainer'),
   historyPrev: $('historyPrev'),
   historyNext: $('historyNext'),
+  useTemplateBtn: $('useTemplateBtn'),
+  templateModal: $('templateModal'),
+  templateModalBackdrop: $('templateModalBackdrop'),
+  templateModalClose: $('templateModalClose'),
+  templateReel: $('templateReel'),
 };
 
 function setStatus(label, kind) {
@@ -281,7 +329,7 @@ function setRenderEnabled(enabled) { els.renderBtn.disabled = !enabled; }
 async function uploadFile(file, kind) {
   const fd = new FormData();
   fd.append('file', file, file.name);
-  const resp = await fetch('/api/upload/' + kind, { method: 'POST', body: fd });
+  const resp = await fetch(apiUrl('upload/' + kind), { method: 'POST', headers: withAuthHeaders(), body: fd });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ message: 'Upload failed' }));
     throw new Error(err.message || 'Upload failed');
@@ -348,6 +396,114 @@ function setStealProgress(text) {
   if (els.stealProgressText) els.stealProgressText.textContent = text;
 }
 
+// ---------------------------------------------------------------------
+// Template tattoo picker. Templates live as static image files in the
+// /templates folder at the site root, listed in /templates/manifest.json
+// (an array of filenames -- see scripts/generate-templates-manifest.js).
+// Picking one runs it through the exact same "become the active tattoo"
+// pipeline as a manual upload: bake in full opacity, upload as a tattoo
+// asset, then load it onto the canvas.
+// ---------------------------------------------------------------------
+let templatesManifestCache = null;
+
+async function loadTemplatesManifest() {
+  if (templatesManifestCache) return templatesManifestCache;
+  const resp = await fetch(templateUrl('manifest.json'));
+  if (!resp.ok) {
+    throw new Error('Could not load template list (templates/manifest.json missing or unreachable)');
+  }
+  const data = await resp.json();
+  templatesManifestCache = Array.isArray(data) ? data : (data.templates || []);
+  return templatesManifestCache;
+}
+
+function openTemplateModal() {
+  if (!els.templateModal) return;
+  els.templateModal.hidden = false;
+  document.body.style.overflow = 'hidden';
+  renderTemplateReel();
+}
+
+function closeTemplateModal() {
+  if (!els.templateModal) return;
+  els.templateModal.hidden = true;
+  document.body.style.overflow = '';
+}
+
+async function renderTemplateReel() {
+  if (!els.templateReel) return;
+  els.templateReel.innerHTML = '<div class="template-reel-loading">Loading templates…</div>';
+  try {
+    const files = await loadTemplatesManifest();
+    if (!files.length) {
+      els.templateReel.innerHTML = '<div class="template-reel-empty">No templates available yet.</div>';
+      return;
+    }
+    els.templateReel.innerHTML = '';
+    files.forEach((filename) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'template-item';
+      item.setAttribute('aria-label', 'Use template tattoo: ' + filename);
+      const img = document.createElement('img');
+      img.src = templateUrl(filename);
+      img.alt = filename;
+      img.loading = 'lazy';
+      item.appendChild(img);
+      item.addEventListener('click', () => onTemplateChosen(filename));
+      els.templateReel.appendChild(item);
+    });
+  } catch (err) {
+    els.templateReel.innerHTML = '';
+    const msg = document.createElement('div');
+    msg.className = 'template-reel-empty';
+    msg.textContent = err.message;
+    els.templateReel.appendChild(msg);
+  }
+}
+
+async function onTemplateChosen(filename) {
+  closeTemplateModal();
+
+  if (!state.bodyNaturalDims) {
+    showToast('Upload a body photo first', 'error', 3000);
+    return;
+  }
+
+  els.tattooHint.textContent = 'loading template…';
+  setStatus('Loading template…', 'rendering');
+
+  try {
+    const imgResp = await fetch(templateUrl(filename));
+    if (!imgResp.ok) throw new Error('Failed to load template image');
+    const blob = await imgResp.blob();
+    const file = new File([blob], filename, { type: blob.type || 'image/png' });
+
+    // Same pipeline as a manual design upload: bake in full opacity,
+    // upload as a 'tattoo' asset, then place it on the canvas.
+    const fileToUpload = await applyOpacityToFile(file, 1);
+    els.tattooHint.textContent = 'uploading…';
+    const result = await uploadFile(fileToUpload, 'tattoo');
+    state.tattooFile = result.filename;
+    state.tattooUrl = result.url;
+    state.tattooOriginalFile = file;
+    state.tattooUploadedOpacity = 1;
+    els.tattooHint.textContent = result.filename;
+    els.tattooHint.classList.add('has-file');
+    showToast('Template tattoo loaded', 'ok');
+
+    const placementState = await els.canvas.loadTattoo(state.tattooUrl, state.bodyNaturalDims);
+    applyStateToUI(placementState);
+    setSlidersEnabled(true);
+    updateReadiness();
+    setStatus('Ready', 'ready');
+  } catch (err) {
+    els.tattooHint.textContent = 'failed';
+    showToast('Template load failed: ' + err.message, 'error', 4000);
+    setStatus('Error', 'error');
+  }
+}
+
 async function onStealClicked() {
   // Trigger file picker; processing starts in onStealSourceSelected
   if (els.stealInput) { els.stealInput.value = ''; els.stealInput.click(); }
@@ -370,9 +526,9 @@ async function onStealSourceSelected(e) {
     // 2. Run the steal pipeline on the server (AI → stolen image)
     setStealProgress('AI is extracting tattoo…');
     els.stealHint.textContent = 'generating…';
-    const stealResp = await fetch('/api/steal-tattoo', {
+    const stealResp = await fetch(apiUrl('steal-tattoo'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: withAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ source_filename: uploadResult.filename }),
     });
     const stealData = await stealResp.json();
@@ -574,9 +730,9 @@ async function onRender() {
 
   try {
     setProgress('AI is generating…');
-    const resp = await fetch('/api/run-workflow', {
+    const resp = await fetch(apiUrl('run-workflow'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: withAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
     const data = await resp.json();
@@ -889,6 +1045,14 @@ function init() {
   });
   if (els.stealCameraInput) els.stealCameraInput.addEventListener('change', onStealSourceSelected);
 
+  // Template tattoo picker
+  if (els.useTemplateBtn) els.useTemplateBtn.addEventListener('click', openTemplateModal);
+  if (els.templateModalClose) els.templateModalClose.addEventListener('click', closeTemplateModal);
+  if (els.templateModalBackdrop) els.templateModalBackdrop.addEventListener('click', closeTemplateModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && els.templateModal && !els.templateModal.hidden) closeTemplateModal();
+  });
+
   // Mobile-only finetune toggle: off by default, gates the placement sliders.
   if (els.finetuneToggle) {
     setFinetuneToggleUI(false);
@@ -1005,13 +1169,13 @@ function init() {
   // Clear uploads on page refresh/leave
   window.addEventListener('beforeunload', () => {
     if (!isDownloading) {
-      navigator.sendBeacon('/api/clear-uploads');
+      navigator.sendBeacon(apiUrl('clear-uploads'));
     }
   });
 
 
   // Check AI readiness on load
-  fetch('/api/status').then((r) => r.json()).then((s) => {
+  fetch(apiUrl('status'), { headers: withAuthHeaders() }).then((r) => r.json()).then((s) => {
     if (!s.ai_ready) {
       setStatus('No API key', 'error');
       showToast('AI_PROVIDER_API_KEY not set — add it to .env', 'error', 6000);
